@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stack Calculator - Dashboard</title>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+    <div class="container">
+        <!-- Header with sample image style -->
+        <header class="hero">
+            <div class="hero-inner">
+                <img src="./img/header-icon.png" alt="icon" class="hero-icon" />
+                <div class="hero-texts">
+                    <h1 class="hero-title">Multi-Calculator</h1>
+                    <p class="hero-subtitle">Comprehensive calculator suite with stack operations</p>
+                </div>
+            </div>
+
+            <!-- Tab-like nav -->
+            <nav class="hero-tabs">
+                <button class="tab active" data-op="infix_to_postfix">Postfix</button>
+                <button class="tab" data-op="simple_interest">Interest</button>
+                <button class="tab" data-op="factorial">Factorial</button>
+                <button class="tab" data-op="circle_area">Area</button>
+                <button class="tab" data-op="average">Average</button>
+            </nav>
+        </header>
+
+        <div class="header">
+            <h1>Stack-Based Calculator</h1>
+            <div class="user-info">
+                <span id="welcomeUser"></span>
+                <button id="logoutBtn" class="btn-secondary">Logout</button>
+            </div>
+        </div>
+
+        <div class="calculator-container">
+            <div class="calc-section">
+                <h2>Select Operation</h2>
+
+                <select id="operationType" class="operation-select">
+                    <option value="">-- Choose Operation --</option>
+                    <option value="infix_to_postfix">Infix to Postfix</option>
+                    <option value="infix_to_prefix">Infix to Prefix</option>
+                    <option value="simple_interest">Simple Interest</option>
+                    <option value="compound_interest">Compound Interest</option>
+                    <option value="circle_area">Circle Area</option>
+                    <option value="rectangle_area">Rectangle Area</option>
+                    <option value="factorial">Factorial</option>
+                    <option value="average">Average</option>
+                </select>
+
+                <div id="inputSection" class="input-section"></div>
+
+                <button id="calculateBtn" class="btn-primary" style="display:none;">Calculate</button>
+
+                <div id="result" class="result-box"></div>
+            </div>
+
+            <div class="history-section">
+                <div class="history-header">
+                    <h2>Calculation History</h2>
+                    <button id="deleteOldestBtn" class="btn-danger">Delete Oldest</button>
+                </div>
+                <div id="historyList" class="history-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./script.js"></script>
+    <script src="./history.js"></script>
+    <script src="./auth.js"></script>
+</body>
+</html>

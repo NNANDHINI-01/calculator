@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Stack Calculator</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="admin-container">
+    <h2>🔐 Admin Login</h2>
+    <form id="adminLoginForm">
+      <label>Username</label>
+      <input type="text" id="adminUsername" required>
+
+      <label>Password</label>
+      <input type="password" id="adminPassword" required>
+
+      <button type="submit">Login</button>
+      <p id="errorMsg"></p>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById("adminUsername").value;
+      const password = document.getElementById("adminPassword").value;
+
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.href = "admin_dashboard.html";
+      } else {
+        document.getElementById("errorMsg").innerText = data.message;
+      }
+    });
+  </script>
+</body>
+</html>

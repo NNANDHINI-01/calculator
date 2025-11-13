@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stack Calculator - Login</title>
+    <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+    <header class="top-bar">
+  <h2>Stack Calculator</h2>
+  <a href="admin_login.html" class="admin-btn">Admin Login</a>
+</header>
+    <div class="container">
+        <div class="auth-box">
+            <h1>Stack-Based Calculator</h1>
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username or Email:</label>
+                    <input type="text" id="username" name="username" required />
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required />
+                </div>
+                <button type="submit" class="btn-primary">Login</button>
+
+                <div style="margin:12px 0; text-align:center;">
+                    <a id="googleLoginBtn" class="btn-secondary fullwidth" href="/login/google">Login with Google</a>
+                </div>
+
+                <div id="message" class="message"></div>
+            </form>
+
+            <p class="auth-link">Don't have an account? <a href="register.html">Register here</a></p>
+        </div>
+    </div>
+
+    <script src="./auth.js"></script>
+</body>
+</html>
