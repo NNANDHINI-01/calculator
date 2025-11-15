@@ -8,6 +8,9 @@ import sqlite3, os, math
 from datetime import datetime
 from functools import wraps
 
+from flask import Flask, redirect, url_for, session, request
+import os
+
 # Load environment variables
 load_dotenv()
 
@@ -16,6 +19,8 @@ DATABASE = 'db.sqlite3'
 SECRET_KEY = os.environ.get('FLASK_SECRET', 'change_this_to_random')
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID"
+GOOGLE_CLIENT_SECRET = "YOUR_CLIENT_SECRET"
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 app.secret_key = SECRET_KEY
@@ -299,7 +304,7 @@ def delete_oldest_history():
 
 # --- Admin endpoints ---
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+ADMIN_PASSWORD = "ads@2025"
 
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
@@ -337,6 +342,30 @@ def admin_history():
     rows = cur.fetchall()
     conn.close()
     return jsonify({'success': True, 'data': [dict(r) for r in rows]})
+
+@app.route('/api/reset-password', methods=['POST'])
+def api_reset_password():
+    data = request.get_json() or {}
+    email = data.get('email')
+    new_password = data.get('newPassword')
+
+    if not email or not new_password:
+        return jsonify({'success': False, 'message': 'Email and new password required'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT id FROM users WHERE email = ?', (email,))
+    user = cur.fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+
+    hashed = generate_password_hash(new_password)
+    cur.execute('UPDATE users SET password_hash = ? WHERE email = ?', (hashed, email))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Password updated successfully'})
 
 
 # --- Run server ---

@@ -62,3 +62,115 @@ th {
   background: #0066ff;
   color: white;
 }
+/* ----------- FULL PAGE BACKGROUND ----------- */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f2f4f8;
+}
+
+/* ----------- MAIN CONTAINER ----------- */
+.admin-dashboard {
+  width: 95%;
+  max-width: 1300px;
+  margin: 30px auto;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0px 3px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ----------- HEADERS ----------- */
+h2 {
+  text-align: center;
+  font-size: 30px;
+  color: #222;
+  margin-bottom: 20px;
+}
+
+h3 {
+  text-align: left;
+  font-size: 22px;
+  margin-top: 40px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+/* ----------- LOGOUT BUTTON ----------- */
+#logoutBtn {
+  background: #ff5252;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  float: right;
+  margin-top: -50px;
+}
+#logoutBtn:hover {
+  background: #d20000;
+}
+
+/* ----------- TABLE WRAPPER (full width) ----------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+}
+
+/* ----------- TABLE HEADER ----------- */
+table thead {
+  background: #005eff;
+  color: white;
+}
+
+table th {
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ----------- TABLE BODY ----------- */
+table td {
+  padding: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #eaeaea;
+  text-align: center;
+}
+
+/* ----------- HOVER EFFECT ROW ----------- */
+table tbody tr:hover {
+  background: #eef4ff;
+  cursor: pointer;
+}
+
+/* ----------- SELECTED USER ROW ----------- */
+.selected-row {
+  background: #dbe7ff !important;
+}
+
+/* ----------- MOBILE RESPONSIVE ----------- */
+@media (max-width: 768px) {
+  .admin-dashboard {
+    width: 98%;
+    padding: 15px;
+  }
+
+  table th, table td {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  #logoutBtn {
+    float: none;
+    display: block;
+    margin: 10px auto;
+  }
+}

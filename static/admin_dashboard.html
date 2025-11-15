@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard - Stack Calculator</title>
   <link rel="stylesheet" href="admin.css">
+  
 </head>
 <body>
   <div class="admin-dashboard">
@@ -40,27 +41,73 @@
     </table>
   </div>
 
-  <script>
-    async function loadData() {
-      const users = await fetch('/api/admin/users').then(res => res.json());
-      const history = await fetch('/api/admin/history').then(res => res.json());
+<script>
+  async function loadData() {
+    const users = await fetch('/api/admin/users').then(res => res.json());
+    const history = await fetch('/api/admin/history').then(res => res.json());
 
-      const usersBody = document.querySelector("#usersTable tbody");
-      usersBody.innerHTML = users.data.map(u =>
-        `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.email}</td><td>${u.created_at}</td></tr>`
-      ).join('');
+    const usersBody = document.querySelector("#usersTable tbody");
+    const historyBody = document.querySelector("#historyTable tbody");
 
-      const historyBody = document.querySelector("#historyTable tbody");
-      historyBody.innerHTML = history.data.map(h =>
-        `<tr><td>${h.id}</td><td>${h.user_id}</td><td>${h.operation_type}</td><td>${h.input_data}</td><td>${h.result}</td><td>${h.created_at}</td></tr>`
-      ).join('');
-    }
+    // Load Users Table
+    usersBody.innerHTML = users.data.map(u =>
+      `<tr class="user-row" data-id="${u.id}">
+         <td>${u.id}</td>
+         <td>${u.username}</td>
+         <td>${u.email}</td>
+         <td>${u.created_at}</td>
+       </tr>`
+    ).join('');
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      fetch('/api/logout').then(() => window.location.href = 'admin_login.html');
+    // ---- CLICK EVENT FOR EACH USER -----
+    document.querySelectorAll(".user-row").forEach(row => {
+      row.addEventListener("click", () => {
+        const uid = row.getAttribute("data-id");
+
+        // Filter history for this user ONLY
+        const filtered = history.data.filter(h => h.user_id == uid);
+
+        // Render filtered history
+        renderHistory(filtered);
+      });
     });
 
-    loadData();
+    // By default: show "Select a user" message
+    historyBody.innerHTML =
+      `<tr><td colspan="6" style="text-align:center;color:blue;">
+         Please select a user from above to view history
+       </td></tr>`;
+  }
+
+  // FUNCTION TO RENDER HISTORY
+  function renderHistory(data) {
+    const historyBody = document.querySelector("#historyTable tbody");
+
+    if (data.length === 0) {
+      historyBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">
+        No history found for this user
+      </td></tr>`;
+      return;
+    }
+
+    historyBody.innerHTML = data.map(h =>
+      `<tr>
+         <td>${h.id}</td>
+         <td>${h.user_id}</td>
+         <td>${h.operation_type}</td>
+         <td>${h.input_data}</td>
+         <td>${h.result}</td>
+         <td>${h.created_at}</td>
+       </tr>`
+    ).join('');
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    fetch('/api/logout').then(() => window.location.href = 'admin_login.html');
+  });
+
+  loadData();
+</script>
   </script>
 </body>
 </html>

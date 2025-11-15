@@ -1,7 +1,8 @@
-// auth.js - Works for index.html, register.html and calculator.html (check auth)
+// auth.js - Works for index.html, register.html, calculator.html, and forgot_password.html
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
+    const resetForm = document.getElementById('resetForm');
     const logoutBtn = document.getElementById('logoutBtn');
 
     // If on calculator page, check auth
@@ -73,6 +74,34 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (err) {
                 messageDiv.className = 'message error';
                 messageDiv.textContent = 'Error connecting to server';
+            }
+        });
+    }
+
+    // RESET PASSWORD (Merged simple snippet)
+    if (resetForm) {
+        resetForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const messageDiv = document.getElementById('message');
+
+            try {
+                const res = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, newPassword })
+                });
+                const data = await res.json();
+                messageDiv.innerText = data.message;
+                messageDiv.style.color = data.success ? 'green' : 'red';
+
+                if (data.success) {
+                    setTimeout(() => window.location.href = 'index.html', 1200);
+                }
+            } catch (err) {
+                messageDiv.innerText = 'Error connecting to server';
+                messageDiv.style.color = 'red';
             }
         });
     }
