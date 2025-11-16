@@ -8,45 +8,33 @@ import sqlite3, os, math
 from datetime import datetime
 from functools import wraps
 
-from flask import Flask, redirect, url_for, session, request
-import os
-
 # Load environment variables
 load_dotenv()
 
 # --- Configuration ---
 DATABASE = 'db.sqlite3'
 SECRET_KEY = os.environ.get('FLASK_SECRET', 'change_this_to_random')
+
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID"
-GOOGLE_CLIENT_SECRET = "YOUR_CLIENT_SECRET"
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 app.secret_key = SECRET_KEY
 
-# Optional Google OAuth
-oauth = OAuth(app) if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET else None
-if oauth:
-    oauth.register(
-        name='google',
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        access_token_url='https://oauth2.googleapis.com/token',
-        authorize_url='https://accounts.google.com/o/oauth2/v2/auth',
-        api_base_url='https://www.googleapis.com/oauth2/v2/',
-        client_kwargs={'scope': 'openid email profile'},
-    )
 
-# --- Database helpers ---
+# ---------------------------------------------------------
+# DATABASE FUNCTIONS
+# ---------------------------------------------------------
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
+    
     cur.execute('''CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
@@ -54,6 +42,7 @@ def init_db():
         password_hash TEXT,
         created_at TEXT
     );''')
+
     cur.execute('''CREATE TABLE IF NOT EXISTS history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -63,24 +52,21 @@ def init_db():
         created_at TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id)
     );''')
+
     conn.commit()
     conn.close()
 
+
 init_db()
 
-# --- Login check decorator ---
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Authentication required'}), 401
-        return f(*args, **kwargs)
-    return decorated
 
-# --- Serve frontend ---
+# ---------------------------------------------------------
+# FRONTEND ROUTES
+# ---------------------------------------------------------
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder, 'index.html')
+
 
 @app.route('/<path:filename>')
 def static_files(filename):
@@ -89,7 +75,22 @@ def static_files(filename):
         return send_from_directory(app.static_folder, filename)
     return send_from_directory(app.static_folder, 'index.html')
 
-# --- Auth endpoints ---
+
+# ---------------------------------------------------------
+# LOGIN REQUIRED DECORATOR
+# ---------------------------------------------------------
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'message': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+# ---------------------------------------------------------
+# REGISTER
+# ---------------------------------------------------------
 @app.route('/api/register', methods=['POST'])
 def api_register():
     data = request.get_json() or {}
@@ -104,14 +105,20 @@ def api_register():
     try:
         conn = get_db()
         cur = conn.cursor()
-        cur.execute('INSERT INTO users (username, email, password_hash, created_at) VALUES (?, ?, ?, ?)',
-                    (username, email, hashed, created_at))
+        cur.execute(
+            'INSERT INTO users (username, email, password_hash, created_at) VALUES (?, ?, ?, ?)',
+            (username, email, hashed, created_at)
+        )
         conn.commit()
         conn.close()
         return jsonify({'success': True, 'message': 'Registered successfully'})
     except sqlite3.IntegrityError:
         return jsonify({'success': False, 'message': 'Username or email already exists'}), 409
 
+
+# ---------------------------------------------------------
+# LOGIN (FIXED — ONLY THIS ROUTE PRESENT)
+# ---------------------------------------------------------
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.get_json() or {}
@@ -122,7 +129,8 @@ def api_login():
 
     conn = get_db()
     cur = conn.cursor()
-    cur.execute('SELECT id, password_hash, username FROM users WHERE username = ? OR email = ?', (username, username))
+    cur.execute('SELECT id, password_hash, username FROM users WHERE username = ? OR email = ?', 
+                (username, username))
     user = cur.fetchone()
     conn.close()
 
@@ -131,77 +139,32 @@ def api_login():
 
     session['user_id'] = user['id']
     session['username'] = user['username']
+
     return jsonify({'success': True, 'message': 'Login successful', 'username': user['username']})
 
+
+# ---------------------------------------------------------
+# AUTH CHECK
+# ---------------------------------------------------------
 @app.route('/api/auth/check', methods=['GET'])
 def api_check():
     if 'user_id' in session:
         return jsonify({'authenticated': True, 'username': session.get('username')})
     return jsonify({'authenticated': False})
 
+
+# ---------------------------------------------------------
+# LOGOUT
+# ---------------------------------------------------------
 @app.route('/api/logout', methods=['GET'])
 def api_logout():
     session.clear()
     return jsonify({'success': True, 'message': 'Logged out'})
 
-# --- Google OAuth (optional) ---
-@app.route('/login/google')
-def login_google():
-    if not oauth:
-        return 'Google OAuth not configured.', 400
-    redirect_uri = url_for('auth_google_callback', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
 
-@app.route('/auth/google/callback')
-def auth_google_callback():
-    if not oauth:
-        return 'Google OAuth not configured.', 400
-    token = oauth.google.authorize_access_token()
-    user_info = oauth.google.get('userinfo').json()
-    email = user_info.get('email')
-    username = user_info.get('name') or email
-
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('SELECT id FROM users WHERE email = ?', (email,))
-    user = cur.fetchone()
-    if not user:
-        hashed = generate_password_hash(os.urandom(16).hex())
-        created_at = datetime.utcnow().isoformat()
-        cur.execute('INSERT INTO users (username, email, password_hash, created_at) VALUES (?, ?, ?, ?)',
-                    (username, email, hashed, created_at))
-        conn.commit()
-        user_id = cur.lastrowid
-    else:
-        user_id = user['id']
-    conn.close()
-
-    session['user_id'] = user_id
-    session['username'] = username
-    return redirect('/calculator.html')
-
-# --- Calculation Logic ---
-@app.route('/api/calculate', methods=['POST'])
-@login_required
-def api_calculate():
-    data = request.get_json() or {}
-    operation = data.get('operation')
-    inputs = data.get('inputs', {})
-
-    try:
-        result = compute_operation(operation, inputs)
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO history (user_id, operation_type, input_data, result, created_at) VALUES (?, ?, ?, ?, ?)',
-                (session['user_id'], operation, str(inputs), str(result), datetime.utcnow().isoformat()))
-    conn.commit()
-    conn.close()
-
-    return jsonify({'success': True, 'result': result})
-
+# ---------------------------------------------------------
+# CALCULATION LOGIC
+# ---------------------------------------------------------
 def infix_to_postfix(expression):
     stack = []
     output = []
@@ -228,42 +191,70 @@ def infix_to_postfix(expression):
 
 
 def infix_to_prefix(expression):
-    # Reverse and swap brackets
     expression = expression[::-1]
     expression = ''.join(['(' if c == ')' else ')' if c == '(' else c for c in expression])
     postfix = infix_to_postfix(expression)
     return postfix[::-1]
+
 
 def compute_operation(operation, inputs):
 
     if operation == 'simple_interest':
         p, r, t = float(inputs['principal']), float(inputs['rate']), float(inputs['time'])
         return round((p * r * t) / 100, 2)
-    elif operation == 'infix_to_postfix':
-        expression = inputs.get('expression', '')
-        return infix_to_postfix(expression)
 
-    elif operation == 'infix_to_prefix':
-        expression = inputs.get('expression', '')
-        return infix_to_prefix(expression)
-    elif operation == 'compound_interest':
+    if operation == 'compound_interest':
         p, r, t, n = float(inputs['principal']), float(inputs['rate']), float(inputs['time']), int(inputs['frequency'])
         a = p * ((1 + (r / 100) / n) ** (n * t))
         return round(a - p, 2)
-    elif operation == 'circle_area':
+
+    if operation == 'circle_area':
         return round(math.pi * float(inputs['radius']) ** 2, 2)
-    elif operation == 'rectangle_area':
+
+    if operation == 'rectangle_area':
         return round(float(inputs['length']) * float(inputs['width']), 2)
-    elif operation == 'factorial':
-        n = int(inputs['number'])
-        return math.factorial(n)
-    elif operation == 'average':
+
+    if operation == 'factorial':
+        return math.factorial(int(inputs['number']))
+
+    if operation == 'average':
         nums = [float(x) for x in inputs['numbers']]
         return sum(nums) / len(nums)
-    else:
-        raise ValueError("Unsupported operation")
 
-# --- History endpoints ---
+    if operation == 'infix_to_postfix':
+        return infix_to_postfix(inputs.get('expression', ''))
+
+    if operation == 'infix_to_prefix':
+        return infix_to_prefix(inputs.get('expression', ''))
+
+    raise ValueError("Unsupported operation")
+
+
+@app.route('/api/calculate', methods=['POST'])
+@login_required
+def api_calculate():
+    data = request.get_json() or {}
+    operation = data.get('operation')
+    inputs = data.get('inputs', {})
+
+    try:
+        result = compute_operation(operation, inputs)
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO history (user_id, operation_type, input_data, result, created_at) VALUES (?, ?, ?, ?, ?)',
+                (session['user_id'], operation, str(inputs), str(result), datetime.utcnow().isoformat()))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'result': result})
+
+
+# ---------------------------------------------------------
+# HISTORY
+# ---------------------------------------------------------
 @app.route('/api/history', methods=['GET'])
 @login_required
 def api_history():
@@ -273,25 +264,8 @@ def api_history():
                 (session['user_id'],))
     rows = cur.fetchall()
     conn.close()
-    history = [dict(r) for r in rows]
-    return jsonify({'success': True, 'history': history})
+    return jsonify({'success': True, 'history': [dict(r) for r in rows]})
 
-
-
-#@app.route('/api/history/delete_oldest', methods=['POST'])
-'''@login_required
-def api_delete_oldest():
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute('SELECT id FROM history WHERE user_id = ? ORDER BY id ASC LIMIT 1', (session['user_id'],))
-    row = cur.fetchone()
-    if not row:
-        conn.close()
-        return jsonify({'success': False, 'message': 'No history to delete'})
-    cur.execute('DELETE FROM history WHERE id = ?', (row['id'],))
-    conn.commit()
-    conn.close()
-    return jsonify({'success': True, 'message': 'Oldest record deleted'})'''
 
 @app.route('/api/history/oldest', methods=['DELETE'])
 def delete_oldest_history():
@@ -302,9 +276,13 @@ def delete_oldest_history():
     conn.close()
     return jsonify({'success': True})
 
-# --- Admin endpoints ---
+
+# ---------------------------------------------------------
+# ADMIN
+# ---------------------------------------------------------
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "ads@2025"
+
 
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
@@ -314,14 +292,15 @@ def admin_login():
         return jsonify({'success': True})
     return jsonify({'success': False, 'message': 'Invalid admin credentials'})
 
+
 def admin_required(f):
-    from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not session.get('admin'):
             return jsonify({'success': False, 'message': 'Admin login required'}), 403
         return f(*args, **kwargs)
     return wrapper
+
 
 @app.route('/api/admin/users', methods=['GET'])
 @admin_required
@@ -333,6 +312,7 @@ def admin_users():
     conn.close()
     return jsonify({'success': True, 'data': [dict(r) for r in rows]})
 
+
 @app.route('/api/admin/history', methods=['GET'])
 @admin_required
 def admin_history():
@@ -343,6 +323,10 @@ def admin_history():
     conn.close()
     return jsonify({'success': True, 'data': [dict(r) for r in rows]})
 
+
+# ---------------------------------------------------------
+# RESET PASSWORD
+# ---------------------------------------------------------
 @app.route('/api/reset-password', methods=['POST'])
 def api_reset_password():
     data = request.get_json() or {}
@@ -356,6 +340,7 @@ def api_reset_password():
     cur = conn.cursor()
     cur.execute('SELECT id FROM users WHERE email = ?', (email,))
     user = cur.fetchone()
+
     if not user:
         conn.close()
         return jsonify({'success': False, 'message': 'User not found'}), 404
@@ -368,8 +353,9 @@ def api_reset_password():
     return jsonify({'success': True, 'message': 'Password updated successfully'})
 
 
-# --- Run server ---
+# ---------------------------------------------------------
+# RUN SERVER
+# ---------------------------------------------------------
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
-    
